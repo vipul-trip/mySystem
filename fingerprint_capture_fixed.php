@@ -8,36 +8,13 @@ $mobile = $_POST['mobile'] ?? '';
 $lat = $_POST['lat'] ?? '26.912434';
 $long = $_POST['long'] ?? '75.787270';
 $aadhaar_number = $_POST['aadhaar_number'] ?? '';
+// $piddata = $_POST['piddata'] ?? '';
 
 $response = '';
 $curlError = '';
 $httpCode = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Check if this is an AJAX request for device testing
-    if (isset($_POST['action']) && $_POST['action'] === 'test_device') {
-        header('Content-Type: application/json');
-        
-        // Test device connectivity
-        $testUrl = "http://127.0.0.1:11100/rd/info";
-        $ch = curl_init($testUrl);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
-        
-        $result = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-        
-        if ($httpCode === 200 && !$curlError) {
-            echo json_encode(['success' => true, 'data' => $result]);
-        } else {
-            echo json_encode(['success' => false, 'error' => $curlError ?: 'HTTP ' . $httpCode]);
-        }
-        exit;
-    }
-    
     $piddata = $_POST['pidData'] ?? '';
 
     if (!$piddata) {
@@ -67,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         "long" => $long,
         "aadhaar_number" => $aadhaar_number,
         "data" => $encrypted_piddata,
+        //"accessmode" => "USB", // "Android" or "USB"
         "is_iris" => 2
     ]);
 
@@ -91,8 +69,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['OTP'] = $result['data']['otp'] ?? '';
             $_SESSION['mobile'] = $mobile;
 
+            // Return success response
             echo json_encode(['success' => true, 'message' => 'KYC submitted successfully', 'data' => $result]);
             exit;
+            // Redirect to register page
+            // header("Location: remitter_register.php");
+        //     exit;
         } else {
             echo json_encode(['success' => false, 'message' => 'API Error: ' . ($result['message'] ?? 'Unknown error')]);
             exit;
