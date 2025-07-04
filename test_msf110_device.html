@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSF110 Mantra Device Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .response-box {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .fingerprint-image {
+            max-width: 200px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>MSF110 Mantra Fingerprint Device Test</h1>
+        
+        <div id="status" class="status info">Ready to test device</div>
+
+        <div class="test-section">
+            <h3>1. Basic Connectivity Test</h3>
+            <button onclick="testConnectivity()">Test Connection</button>
+            <div id="connectivity-result" class="response-box" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Device Information</h3>
+            <button onclick="getDeviceInfo()">Get Device Info</button>
+            <div id="device-info" class="response-box" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Fingerprint Capture Test</h3>
+            <button onclick="captureFingerprint()" id="captureBtn">Capture Fingerprint</button>
+            <div id="capture-result" class="response-box" style="display: none;"></div>
+            <div id="fingerprint-image"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. Advanced Diagnostics</h3>
+            <button onclick="runDiagnostics()">Run Full Diagnostics</button>
+            <div id="diagnostics-result" class="response-box" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const testUrls = [
+            'http://127.0.0.1:11100',
+            'http://localhost:11100',
+            'http://127.0.0.1:11101',
+            'http://127.0.0.1:8005'
+        ];
+
+        let workingUrl = null;
+
+        function setStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function showResponse(elementId, content) {
+            const el = document.getElementById(elementId);
+            el.style.display = 'block';
+            el.textContent = content;
+        }
+
+        async function testConnectivity() {
+            setStatus('Testing connectivity on multiple ports...', 'info');
+            showResponse('connectivity-result', 'Testing...');
+
+            for (const baseUrl of testUrls) {
+                try {
+                    const startTime = Date.now();
+                    const response = await fetch(baseUrl + '/rd/info', {
+                        method: 'GET',
+                        timeout: 5000
+                    });
+                    const responseTime = Date.now() - startTime;
+                    
+                    if (response.ok) {
+                        const data = await response.text();
+                        workingUrl = baseUrl;
+                        setStatus(`✅ Connected successfully to ${baseUrl}`, 'success');
+                        showResponse('connectivity-result', 
+                            `SUCCESS: Connected to ${baseUrl}\n` +
+                            `Response Time: ${responseTime}ms\n` +
+                            `Status: ${response.status}\n` +
+                            `Response: ${data.substring(0, 200)}...`
+                        );
+                        return;
+                    }
+                } catch (error) {
+                    console.log(`Failed to connect to ${baseUrl}:`, error);
+                }
+            }
+
+            setStatus('❌ Failed to connect to any RD service port', 'error');
+            showResponse('connectivity-result', 
+                'FAILED: Could not connect to any of the tested ports.\n\n' +
+                'Tested ports:\n' + testUrls.join('\n') + '\n\n' +
+                'Please ensure:\n' +
+                '1. MSF110 RD Service is running\n' +
+                '2. Device is properly connected\n' +
+                '3. Service is running as Administrator\n' +
+                '4. Firewall is not blocking the connection'
+            );
+        }
+
+        async function getDeviceInfo() {
+            if (!workingUrl) {
+                setStatus('Please test connectivity first', 'error');
+                return;
+            }
+
+            setStatus('Getting device information...', 'info');
+            showResponse('device-info', 'Fetching device info...');
+
+            try {
+                const response = await fetch(workingUrl + '/rd/info', {
+                    method: 'GET'
+                });
+
+                if (response.ok) {
+                    const data = await response.text();
+                    setStatus('Device info retrieved successfully', 'success');
+                    showResponse('device-info', data);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                setStatus('Failed to get device info', 'error');
+                showResponse('device-info', `Error: ${error.message}`);
+            }
+        }
+
+        async function captureFingerprint() {
+            if (!workingUrl) {
+                setStatus('Please test connectivity first', 'error');
+                return;
+            }
+
+            setStatus('Capturing fingerprint... Please place finger on scanner', 'info');
+            showResponse('capture-result', 'Capturing fingerprint...');
+
+            const captureRequest = {
+                "Quality": 60,
+                "TimeOut": 10,
+                "fCount": 1,
+                "fType": 0,
+                "iCount": 0,
+                "iType": 0,
+                "pCount": 0,
+                "pType": 0,
+                "format": 0,
+                "pidVer": "2.0",
+                "timeout": 10,
+                "otp": "",
+                "env": "P"
+            };
+
+            try {
+                const response = await fetch(workingUrl + '/rd/capture', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(captureRequest)
+                });
+
+                if (response.ok) {
+                    const data = await response.text();
+                    
+                    // Parse XML response
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(data, "text/xml");
+                    
+                    const respElement = xmlDoc.getElementsByTagName("Resp")[0];
+                    if (respElement) {
+                        const errCode = respElement.getAttribute("errCode");
+                        const errInfo = respElement.getAttribute("errInfo");
+                        
+                        if (errCode === "0") {
+                            setStatus('✅ Fingerprint captured successfully!', 'success');
+                            
+                            // Extract image data
+                            const dataElement = xmlDoc.getElementsByTagName("Data")[0];
+                            if (dataElement) {
+                                const imageData = dataElement.textContent;
+                                displayFingerprintImage(imageData);
+                            }
+                            
+                            showResponse('capture-result', data);
+                        } else {
+                            setStatus(`❌ Capture failed: ${errInfo}`, 'error');
+                            showResponse('capture-result', `Error Code: ${errCode}\nError Info: ${errInfo}\n\nFull Response:\n${data}`);
+                        }
+                    } else {
+                        setStatus('Unexpected response format', 'error');
+                        showResponse('capture-result', data);
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                setStatus('Failed to capture fingerprint', 'error');
+                showResponse('capture-result', `Error: ${error.message}`);
+            }
+        }
+
+        function displayFingerprintImage(base64Data) {
+            if (base64Data) {
+                const imgEl = document.createElement('img');
+                imgEl.src = `data:image/bmp;base64,${base64Data}`;
+                imgEl.className = 'fingerprint-image';
+                imgEl.alt = 'Captured Fingerprint';
+                
+                const container = document.getElementById('fingerprint-image');
+                container.innerHTML = '<h4>Captured Fingerprint:</h4>';
+                container.appendChild(imgEl);
+            }
+        }
+
+        async function runDiagnostics() {
+            setStatus('Running full diagnostics...', 'info');
+            showResponse('diagnostics-result', 'Running diagnostics...\n\n');
+
+            let diagnosticResults = 'MSF110 Mantra Device Diagnostics\n';
+            diagnosticResults += '=' .repeat(40) + '\n\n';
+
+            // Test 1: Port availability
+            diagnosticResults += '1. Testing port availability:\n';
+            for (const url of testUrls) {
+                try {
+                    const response = await fetch(url + '/rd/info', { timeout: 2000 });
+                    diagnosticResults += `   ✅ ${url} - Available\n`;
+                } catch (error) {
+                    diagnosticResults += `   ❌ ${url} - Not available\n`;
+                }
+            }
+
+            diagnosticResults += '\n2. Browser compatibility:\n';
+            diagnosticResults += `   User Agent: ${navigator.userAgent}\n`;
+            diagnosticResults += `   HTTPS: ${location.protocol === 'https:'}\n`;
+            
+            if (location.protocol === 'https:') {
+                diagnosticResults += '   ⚠️  Warning: HTTPS may block localhost requests\n';
+            }
+
+            diagnosticResults += '\n3. Network connectivity:\n';
+            try {
+                const testResponse = await fetch('https://httpbin.org/get', { timeout: 3000 });
+                diagnosticResults += '   ✅ Internet connectivity - OK\n';
+            } catch (error) {
+                diagnosticResults += '   ❌ Internet connectivity - Limited\n';
+            }
+
+            if (workingUrl) {
+                diagnosticResults += '\n4. Device-specific tests:\n';
+                try {
+                    const infoResponse = await fetch(workingUrl + '/rd/info');
+                    const infoData = await infoResponse.text();
+                    
+                    if (infoData.includes('MSF110') || infoData.includes('MANTRA')) {
+                        diagnosticResults += '   ✅ MSF110 device detected\n';
+                    } else {
+                        diagnosticResults += '   ⚠️  Device type unclear\n';
+                    }
+                } catch (error) {
+                    diagnosticResults += '   ❌ Device info test failed\n';
+                }
+            }
+
+            diagnosticResults += '\n5. Recommendations:\n';
+            if (!workingUrl) {
+                diagnosticResults += '   • Restart RD Service as Administrator\n';
+                diagnosticResults += '   • Check device connection\n';
+                diagnosticResults += '   • Verify driver installation\n';
+            }
+            if (location.protocol === 'https:') {
+                diagnosticResults += '   • Use HTTP instead of HTTPS for local testing\n';
+            }
+
+            showResponse('diagnostics-result', diagnosticResults);
+            setStatus('Diagnostics completed', 'info');
+        }
+
+        // Auto-run connectivity test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testConnectivity, 1000);
+        });
+    </script>
+</body>
+</html>
