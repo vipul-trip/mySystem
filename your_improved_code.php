@@ -218,7 +218,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             addDiagnostic(message, type);
         }
 
-        document.getElementById('testConnection').addEventListener('click', async function (e) {
+        // TEMPORARILY COMMENTED OUT - TESTING BASIC FUNCTIONALITY
+        /*document.getElementById('testConnection').addEventListener('click', async function (e) {
             e.preventDefault();
             
             updateDeviceStatus('🔍 Testing device connections...', 'info');
@@ -284,9 +285,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 addDiagnostic('3. Check Windows Device Manager for device');
                 addDiagnostic('4. Verify firewall is not blocking port 11100');
             }
-        });
+        });*/
 
-        document.getElementById('initialize').addEventListener('click', async function (e) {
+        /*document.getElementById('initialize').addEventListener('click', async function (e) {
             e.preventDefault();
 
             if (!workingBaseUrl) {
@@ -319,9 +320,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 updateDeviceStatus(`❌ Initialization failed: ${error.message}`, 'error');
                 addDiagnostic(`Initialization error: ${error.message}`);
             }
-        });
+        });*/
 
-        document.getElementById('capture').addEventListener('click', async function (e) {
+        /*document.getElementById('capture').addEventListener('click', async function (e) {
             e.preventDefault();
             
             if (!workingBaseUrl) {
@@ -415,7 +416,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 addDiagnostic(`Capture error: ${error.message}`);
                 console.error('Full capture error:', error);
             }
-        }); 
+        });*/ 
 
         // Enhanced form submission
         document.getElementById('kycForm').addEventListener('submit', async function(e) {
@@ -470,13 +471,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             statusElement.style.marginTop = '10px';
         }
 
+        // Debug: Check if elements exist
+        console.log('Script loaded');
+        console.log('testConnection element:', document.getElementById('testConnection'));
+        console.log('initialize element:', document.getElementById('initialize'));
+        console.log('capture element:', document.getElementById('capture'));
+
+        // Test button click events with simple alerts first
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
+            
+            const testBtn = document.getElementById('testConnection');
+            const initBtn = document.getElementById('initialize');
+            const captureBtn = document.getElementById('capture');
+            
+            console.log('Elements found:', {
+                testBtn: !!testBtn,
+                initBtn: !!initBtn,
+                captureBtn: !!captureBtn
+            });
+
+            // Add simple click test
+            if (testBtn) {
+                testBtn.addEventListener('click', function() {
+                    console.log('Test Connection button clicked!');
+                    alert('Test Connection button is working!');
+                });
+            }
+
+            if (initBtn) {
+                initBtn.addEventListener('click', function() {
+                    console.log('Initialize button clicked!');
+                    alert('Initialize button is working!');
+                });
+            }
+
+            if (captureBtn) {
+                captureBtn.addEventListener('click', function() {
+                    console.log('Capture button clicked!');
+                    alert('Capture button is working!');
+                });
+            }
+        });
+
         // Auto-run connection test on page load
         window.addEventListener('load', () => {
             addDiagnostic('Page loaded - Ready for device testing');
+            console.log('Window loaded');
             // Auto-test connection after 2 seconds
-            setTimeout(() => {
-                document.getElementById('testConnection').click();
-            }, 2000);
+            // setTimeout(() => {
+            //     document.getElementById('testConnection').click();
+            // }, 2000);
         });
     </script>
 </body>
