@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MSF110 Complete Diagnostic Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1, h2 { color: #333; }
+        .test-section {
+            border: 1px solid #ddd;
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #6c757d; cursor: not-allowed; }
+        .log-area {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .step { margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 5px; }
+        .command { background: #343a40; color: white; padding: 10px; border-radius: 3px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 MSF110 Mantra Device - Complete Diagnostic Tool</h1>
+        
+        <div class="test-section">
+            <h2>📊 Current System Status</h2>
+            <div id="systemStatus" class="status info">Click "Run Full Diagnostics" to check system status</div>
+            <button onclick="runFullDiagnostics()">🔄 Run Full Diagnostics</button>
+            <button onclick="clearLogs()">🗑️ Clear Logs</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🌐 Network & Port Testing</h2>
+            <div id="networkStatus" class="log-area">Network tests will appear here...</div>
+            <button onclick="testAllPorts()">🔌 Test All Ports</button>
+            <button onclick="testSpecificUrl()">🎯 Test Specific URL</button>
+            <input type="text" id="customUrl" placeholder="http://127.0.0.1:11100" style="width: 200px; padding: 8px;">
+        </div>
+
+        <div class="test-section">
+            <h2>🖥️ Service Status Check</h2>
+            <div id="serviceStatus" class="log-area">Service status will appear here...</div>
+            <button onclick="checkServiceStatus()">⚙️ Check RD Service</button>
+            <button onclick="restartInstructions()">🔄 Show Restart Instructions</button>
+        </div>
+
+        <div class="test-section">
+            <h2>🔧 Device Testing</h2>
+            <div id="deviceStatus" class="log-area">Device tests will appear here...</div>
+            <button onclick="testDeviceInfo()">📱 Test Device Info</button>
+            <button onclick="testCapture()">👆 Test Capture</button>
+            <button onclick="advancedDeviceTest()">🔬 Advanced Device Test</button>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 Step-by-Step Fix Instructions</h2>
+            <div id="fixInstructions">
+                <div class="step">
+                    <h4>Step 1: Check Service Status</h4>
+                    <p>Open Command Prompt as Administrator and run:</p>
+                    <div class="command">tasklist | findstr -i "mantra"</div>
+                    <p>You should see MantraRDService.exe running</p>
+                </div>
+
+                <div class="step">
+                    <h4>Step 2: Check Port Binding</h4>
+                    <div class="command">netstat -ano | findstr :11100</div>
+                    <p>You should see TCP 127.0.0.1:11100 LISTENING</p>
+                </div>
+
+                <div class="step">
+                    <h4>Step 3: Test Direct HTTP Access</h4>
+                    <div class="command">curl -v http://127.0.0.1:11100/rd/info</div>
+                    <p>Should return XML response with device information</p>
+                </div>
+
+                <div class="step">
+                    <h4>Step 4: Restart Service (if needed)</h4>
+                    <div class="command">taskkill /f /im MantraRDService.exe</div>
+                    <div class="command">Start RD Service as Administrator</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>📞 Emergency Troubleshooting</h2>
+            <button onclick="emergencyFix()" style="background: #dc3545;">🚨 Emergency Auto-Fix</button>
+            <button onclick="generateReport()">📄 Generate Report</button>
+            <div id="emergencyLog" class="log-area" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const commonUrls = [
+            'http://127.0.0.1:11100/rd/info',
+            'http://localhost:11100/rd/info',
+            'http://127.0.0.1:11100/info',
+            'http://localhost:11100/info',
+            'http://127.0.0.1:11101/rd/info',
+            'http://127.0.0.1:8005/rd/info',
+            'http://127.0.0.1:11100/',
+            'http://localhost:11100/',
+        ];
+
+        let logData = '';
+        let workingUrl = null;
+        let deviceConnected = false;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}\n`;
+            logData += logEntry;
+            
+            const statusEl = document.getElementById('systemStatus');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = `status ${type}`;
+            }
+            
+            console.log(logEntry);
+        }
+
+        function updateSection(sectionId, content, append = false) {
+            const section = document.getElementById(sectionId);
+            if (section) {
+                if (append) {
+                    section.textContent += content + '\n';
+                } else {
+                    section.textContent = content;
+                }
+            }
+        }
+
+        async function testAllPorts() {
+            log('Testing all common ports...', 'info');
+            updateSection('networkStatus', 'Testing ports...\n\n');
+            
+            let results = 'PORT TESTING RESULTS:\n' + '='.repeat(50) + '\n\n';
+            let foundWorking = false;
+
+            for (const url of commonUrls) {
+                try {
+                    updateSection('networkStatus', `Testing: ${url}`, true);
+                    
+                    const startTime = Date.now();
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 5000);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        signal: controller.signal
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    const responseTime = Date.now() - startTime;
+                    
+                    if (response.ok) {
+                        const data = await response.text();
+                        workingUrl = url;
+                        foundWorking = true;
+                        
+                        results += `✅ ${url}\n`;
+                        results += `   Status: ${response.status}\n`;
+                        results += `   Response Time: ${responseTime}ms\n`;
+                        results += `   Content Length: ${data.length} bytes\n`;
+                        
+                        if (data.includes('MSF110') || data.includes('MANTRA')) {
+                            results += `   Device: MSF110 Mantra detected! 🎉\n`;
+                            deviceConnected = true;
+                        } else if (data.includes('RDService') || data.includes('dpId')) {
+                            results += `   Device: RD Service detected\n`;
+                        }
+                        results += `   Sample Response: ${data.substring(0, 100)}...\n\n`;
+                    } else {
+                        results += `❌ ${url} - HTTP ${response.status}\n\n`;
+                    }
+                } catch (error) {
+                    results += `❌ ${url} - ${error.message}\n\n`;
+                }
+            }
+
+            if (foundWorking) {
+                results += `\n🎉 SUCCESS: Found working URL: ${workingUrl}\n`;
+                log('Device connection successful!', 'success');
+            } else {
+                results += `\n❌ FAILED: No working RD service found\n`;
+                results += `\nTROUBLESHOOTING:\n`;
+                results += `1. Ensure MSF110 device is connected\n`;
+                results += `2. Restart RD Service as Administrator\n`;
+                results += `3. Check Windows Firewall settings\n`;
+                results += `4. Verify device drivers are installed\n`;
+                log('No working RD service found', 'error');
+            }
+
+            updateSection('networkStatus', results);
+        }
+
+        async function testSpecificUrl() {
+            const customUrl = document.getElementById('customUrl').value || 'http://127.0.0.1:11100/rd/info';
+            
+            try {
+                log(`Testing custom URL: ${customUrl}`, 'info');
+                updateSection('networkStatus', `Testing custom URL: ${customUrl}\n\n`);
+                
+                const response = await fetch(customUrl);
+                const data = await response.text();
+                
+                let result = `CUSTOM URL TEST RESULT:\n`;
+                result += `URL: ${customUrl}\n`;
+                result += `Status: ${response.status} ${response.statusText}\n`;
+                result += `Response Length: ${data.length} bytes\n\n`;
+                result += `Response Content:\n${data}`;
+                
+                updateSection('networkStatus', result);
+                
+                if (response.ok) {
+                    log('Custom URL test successful', 'success');
+                } else {
+                    log('Custom URL test failed', 'error');
+                }
+            } catch (error) {
+                const result = `CUSTOM URL TEST FAILED:\n${customUrl}\nError: ${error.message}`;
+                updateSection('networkStatus', result);
+                log('Custom URL test failed', 'error');
+            }
+        }
+
+        async function checkServiceStatus() {
+            log('Checking RD service status...', 'info');
+            
+            let statusReport = 'RD SERVICE STATUS CHECK:\n';
+            statusReport += '='.repeat(40) + '\n\n';
+            
+            // Test if we can detect the service through network calls
+            try {
+                const response = await fetch('http://127.0.0.1:11100/rd/info', { timeout: 3000 });
+                if (response.ok) {
+                    statusReport += '✅ RD Service is responding on port 11100\n';
+                    statusReport += `   Status: ${response.status}\n`;
+                    const data = await response.text();
+                    statusReport += `   Response length: ${data.length} bytes\n\n`;
+                } else {
+                    statusReport += '❌ RD Service not responding properly\n';
+                    statusReport += `   HTTP Status: ${response.status}\n\n`;
+                }
+            } catch (error) {
+                statusReport += '❌ Cannot connect to RD Service\n';
+                statusReport += `   Error: ${error.message}\n\n`;
+            }
+            
+            statusReport += 'MANUAL CHECKS NEEDED:\n';
+            statusReport += '1. Open Task Manager and look for "MantraRDService.exe"\n';
+            statusReport += '2. Open Command Prompt as Admin and run:\n';
+            statusReport += '   tasklist | findstr -i "mantra"\n';
+            statusReport += '3. Check port binding:\n';
+            statusReport += '   netstat -ano | findstr :11100\n';
+            statusReport += '4. If not running, start the service:\n';
+            statusReport += '   - Navigate to RD Service installation folder\n';
+            statusReport += '   - Run MantraRDService.exe as Administrator\n';
+            
+            updateSection('serviceStatus', statusReport);
+        }
+
+        async function testDeviceInfo() {
+            if (!workingUrl) {
+                updateSection('deviceStatus', 'Error: No working URL found. Run port test first.');
+                return;
+            }
+            
+            log('Testing device info...', 'info');
+            
+            try {
+                const response = await fetch(workingUrl);
+                const data = await response.text();
+                
+                let deviceReport = 'DEVICE INFORMATION:\n';
+                deviceReport += '='.repeat(30) + '\n\n';
+                deviceReport += `URL: ${workingUrl}\n`;
+                deviceReport += `Status: ${response.status}\n`;
+                deviceReport += `Response Type: ${data.includes('<') ? 'XML' : 'JSON/Text'}\n\n`;
+                deviceReport += 'RAW RESPONSE:\n';
+                deviceReport += '-'.repeat(20) + '\n';
+                deviceReport += data;
+                
+                updateSection('deviceStatus', deviceReport);
+                
+                if (data.includes('MSF110')) {
+                    log('MSF110 device detected!', 'success');
+                } else if (data.includes('MANTRA')) {
+                    log('Mantra device detected!', 'success');
+                } else {
+                    log('Device type unclear', 'warning');
+                }
+            } catch (error) {
+                updateSection('deviceStatus', `Device info test failed: ${error.message}`);
+                log('Device info test failed', 'error');
+            }
+        }
+
+        async function testCapture() {
+            if (!workingUrl) {
+                updateSection('deviceStatus', 'Error: No working URL found. Run port test first.');
+                return;
+            }
+            
+            log('Testing fingerprint capture...', 'info');
+            
+            const captureUrl = workingUrl.replace('/info', '/capture').replace('/rd/info', '/rd/capture');
+            
+            const captureData = {
+                "Quality": 60,
+                "TimeOut": 10,
+                "fCount": 1,
+                "fType": 0,
+                "iCount": 0,
+                "iType": 0,
+                "pCount": 0,
+                "pType": 0,
+                "format": 0,
+                "pidVer": "2.0",
+                "timeout": 10,
+                "otp": "",
+                "env": "P"
+            };
+            
+            try {
+                updateSection('deviceStatus', 'Testing capture... Please place finger on scanner.\n\n', true);
+                
+                const response = await fetch(captureUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(captureData)
+                });
+                
+                const result = await response.text();
+                
+                let captureReport = 'CAPTURE TEST RESULT:\n';
+                captureReport += '='.repeat(25) + '\n\n';
+                captureReport += `Capture URL: ${captureUrl}\n`;
+                captureReport += `Status: ${response.status}\n\n`;
+                
+                // Try to parse as XML first
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(result, "text/xml");
+                    const respElement = xmlDoc.getElementsByTagName("Resp")[0];
+                    
+                    if (respElement) {
+                        const errCode = respElement.getAttribute("errCode");
+                        const errInfo = respElement.getAttribute("errInfo");
+                        
+                        captureReport += `Error Code: ${errCode}\n`;
+                        captureReport += `Error Info: ${errInfo}\n\n`;
+                        
+                        if (errCode === "0") {
+                            captureReport += '✅ CAPTURE SUCCESSFUL!\n';
+                            log('Fingerprint capture successful!', 'success');
+                        } else {
+                            captureReport += '❌ CAPTURE FAILED\n';
+                            log('Fingerprint capture failed', 'error');
+                        }
+                    }
+                } catch (xmlError) {
+                    captureReport += 'Response (not XML):\n';
+                    captureReport += result;
+                }
+                
+                captureReport += '\n\nRAW RESPONSE:\n';
+                captureReport += '-'.repeat(15) + '\n';
+                captureReport += result;
+                
+                updateSection('deviceStatus', captureReport, true);
+                
+            } catch (error) {
+                updateSection('deviceStatus', `Capture test failed: ${error.message}\n\n`, true);
+                log('Capture test failed', 'error');
+            }
+        }
+
+        async function runFullDiagnostics() {
+            log('Running full diagnostics...', 'info');
+            
+            // Reset states
+            workingUrl = null;
+            deviceConnected = false;
+            
+            // Run all tests in sequence
+            await testAllPorts();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await checkServiceStatus();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            if (workingUrl) {
+                await testDeviceInfo();
+            }
+            
+            // Final summary
+            let summary = '\n\nFULL DIAGNOSTIC SUMMARY:\n';
+            summary += '='.repeat(40) + '\n';
+            summary += `Working URL: ${workingUrl || 'None found'}\n`;
+            summary += `Device Detected: ${deviceConnected ? 'Yes' : 'No'}\n`;
+            summary += `Overall Status: ${workingUrl && deviceConnected ? 'GOOD' : 'NEEDS ATTENTION'}\n`;
+            
+            updateSection('networkStatus', summary, true);
+            
+            if (workingUrl && deviceConnected) {
+                log('✅ Full diagnostics complete - System working!', 'success');
+            } else {
+                log('❌ Full diagnostics complete - Issues found', 'error');
+            }
+        }
+
+        function advancedDeviceTest() {
+            const advancedTests = `
+ADVANCED DEVICE TESTING:
+========================
+
+1. Test Multiple Endpoints:
+   • /rd/info
+   • /rd/capture  
+   • /info
+   • /capture
+   • / (root)
+
+2. Test Different Request Methods:
+   • GET requests for info
+   • POST requests for capture
+   • OPTIONS for CORS
+
+3. Test Different Ports:
+   • 11100 (default)
+   • 11101 (alternative)
+   • 8005 (some devices)
+
+4. Browser Security Tests:
+   • HTTPS vs HTTP
+   • CORS headers
+   • Content-Type handling
+
+5. Device-Specific Tests:
+   • MSF110 XML format
+   • Error code handling
+   • Timeout behavior
+
+Run these tests manually if automatic tests fail.
+`;
+            updateSection('deviceStatus', advancedTests);
+        }
+
+        function restartInstructions() {
+            const instructions = `
+RD SERVICE RESTART INSTRUCTIONS:
+===============================
+
+Method 1 - Task Manager:
+1. Open Task Manager (Ctrl+Shift+Esc)
+2. Find "MantraRDService.exe" 
+3. Right-click → End Task
+4. Navigate to installation folder (usually):
+   C:\\Program Files\\Mantra\\RDService\\
+5. Right-click MantraRDService.exe → Run as Administrator
+
+Method 2 - Command Line:
+1. Open Command Prompt as Administrator
+2. Kill existing service:
+   taskkill /f /im MantraRDService.exe
+3. Start service:
+   cd "C:\\Program Files\\Mantra\\RDService"
+   MantraRDService.exe
+
+Method 3 - Services Manager:
+1. Win+R → services.msc
+2. Find "Mantra RD Service"
+3. Right-click → Restart
+4. Set Startup Type to "Automatic"
+
+IMPORTANT: Always run as Administrator!
+`;
+            updateSection('serviceStatus', instructions);
+        }
+
+        async function emergencyFix() {
+            document.getElementById('emergencyLog').style.display = 'block';
+            log('Running emergency auto-fix...', 'warning');
+            
+            let fixLog = 'EMERGENCY AUTO-FIX PROCEDURE:\n';
+            fixLog += '='.repeat(35) + '\n\n';
+            
+            // Test 1: Basic connectivity
+            fixLog += '1. Testing basic connectivity...\n';
+            updateSection('emergencyLog', fixLog);
+            
+            let foundAny = false;
+            for (const url of commonUrls.slice(0, 4)) { // Test first 4 URLs only
+                try {
+                    const response = await fetch(url, { timeout: 2000 });
+                    if (response.ok) {
+                        fixLog += `   ✅ Found working URL: ${url}\n`;
+                        workingUrl = url;
+                        foundAny = true;
+                        break;
+                    }
+                } catch (error) {
+                    fixLog += `   ❌ ${url} failed\n`;
+                }
+                updateSection('emergencyLog', fixLog);
+            }
+            
+            if (!foundAny) {
+                fixLog += '\n2. No working URLs found. Trying alternative approaches...\n';
+                fixLog += '   • Check if RD Service is running\n';
+                fixLog += '   • Try restarting the service\n';
+                fixLog += '   • Check device connection\n';
+                fixLog += '   • Verify drivers are installed\n\n';
+                fixLog += 'MANUAL STEPS REQUIRED:\n';
+                fixLog += '1. Restart RD Service as Administrator\n';
+                fixLog += '2. Check device USB connection\n';
+                fixLog += '3. Reinstall device drivers if needed\n';
+            } else {
+                fixLog += '\n2. Testing device functionality...\n';
+                try {
+                    const response = await fetch(workingUrl);
+                    const data = await response.text();
+                    fixLog += `   ✅ Device responding\n`;
+                    fixLog += `   ✅ Response length: ${data.length} bytes\n`;
+                    
+                    if (data.includes('MSF110') || data.includes('MANTRA')) {
+                        fixLog += '   ✅ MSF110 device confirmed!\n';
+                        fixLog += '\n🎉 EMERGENCY FIX SUCCESSFUL!\n';
+                        fixLog += 'Your device should now work in the main application.\n';
+                        log('Emergency fix successful!', 'success');
+                    } else {
+                        fixLog += '   ⚠️ Device type unclear but service responding\n';
+                        log('Partial fix - service responding', 'warning');
+                    }
+                } catch (error) {
+                    fixLog += `   ❌ Device test failed: ${error.message}\n`;
+                }
+            }
+            
+            updateSection('emergencyLog', fixLog);
+        }
+
+        function generateReport() {
+            const report = `
+MSF110 DIAGNOSTIC REPORT
+========================
+Generated: ${new Date().toLocaleString()}
+
+SUMMARY:
+- Working URL: ${workingUrl || 'None'}
+- Device Connected: ${deviceConnected ? 'Yes' : 'No'}
+- Browser: ${navigator.userAgent}
+- Page Protocol: ${location.protocol}
+
+DETAILED LOG:
+${logData}
+
+RECOMMENDATIONS:
+${workingUrl ? 
+    '✅ System appears to be working correctly.' : 
+    '❌ System needs attention. Follow troubleshooting steps.'}
+
+END OF REPORT
+`;
+            
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'MSF110_Diagnostic_Report.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearLogs() {
+            logData = '';
+            updateSection('networkStatus', 'Logs cleared. Ready for new tests.');
+            updateSection('serviceStatus', 'Logs cleared. Ready for new tests.');
+            updateSection('deviceStatus', 'Logs cleared. Ready for new tests.');
+            document.getElementById('emergencyLog').style.display = 'none';
+            log('Logs cleared', 'info');
+        }
+
+        // Auto-run basic diagnostics on page load
+        window.addEventListener('load', () => {
+            log('Diagnostic tool loaded. Click "Run Full Diagnostics" to start.', 'info');
+        });
+    </script>
+</body>
+</html>
